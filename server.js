@@ -19,7 +19,7 @@ async function reply(replyToken, messages) {
   await fetch("https://api.line.me/v2/bot/message/reply", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${ACCESS_TOKEN}` },
-    body: JSON.stringify({ replyToken, messages }),
+    body: JSON.stringify({ replyToken, messages })
   });
 }
 function addFromAge(age) {
@@ -30,9 +30,7 @@ function addFromAge(age) {
   if (age < 60) return 2.25;
   return 2.5;
 }
-function demand(cm) {
-  return cm ? +(100 / cm).toFixed(2) : 0;
-}
+function demand(cm) { return cm ? +(100 / cm).toFixed(2) : 0; }
 
 // --- domain ---
 const TASKS = {
@@ -43,7 +41,7 @@ const TASKS = {
   "家事": { far: 0, mid: 2, near: 2 },
   "手芸": { far: 0, mid: 1, near: 3 },
   "散歩/外出": { far: 2, mid: 1, near: 0 },
-  "スポーツ": { far: 3, mid: 0, near: 0 },
+  "スポーツ": { far: 3, mid: 0, near: 0 }
 };
 function decide(weights) {
   const { far, mid, near } = weights;
@@ -72,12 +70,12 @@ app.post("/webhook", async (req, res) => {
         text:
           "3行で送ると自動診断します。\n" +
           "例：\n運転,PC,スマホ\n48\n40,60\n（行ごとに改行して送ってね）\n" +
-          "まずは「診断開始」と送るとボタンが出ます。",
+          "まずは「診断開始」と送るとボタンが出ます。"
       }]);
       continue;
     }
 
-    // 1) 入口（クイックリプライ表示）
+    // 1) 入口（クイックリプライ）
     if (text === "診断" || text === "診断開始") {
       await reply(ev.replyToken, [
         {
@@ -93,27 +91,27 @@ app.post("/webhook", async (req, res) => {
               { type: "action", action: { type: "message", label: "手芸", text: "手芸" } },
               { type: "action", action: { type: "message", label: "散歩/外出", text: "散歩/外出" } },
               { type: "action", action: { type: "message", label: "スポーツ", text: "スポーツ" } },
-              { type: "action", action: { type: "message", label: "入力例", text: "運転,PC,スマホ\n48\n40,60" } },
-            ],
-          },
-        },
+              { type: "action", action: { type: "message", label: "入力例", text: "運転,PC,スマホ\n48\n40,60" } }
+            ]
+          }
+        }
       ]);
       continue;
     }
 
-    // 2) 3行プロトコルを解析
+    // 2) 3行プロトコル解析
     // 1行目: 用途（カンマ区切り） 2行目: 年齢 3行目: 手元cm,PCcm
     const lines = text.split(/\n/);
-    const picks = (lines[0] || "").split(/[,、]/).map((s) => s.trim()).filter(Boolean);
+    const picks = (lines[0] || "").split(/[,、]/).map(s => s.trim()).filter(Boolean);
     const age = parseInt(lines[1]) || 0;
-    const [nearCm, pcCm] = (lines[2] || "").split(/[,、]/).map((v) => parseInt(v) || 0);
+    const [nearCm, pcCm] = (lines[2] || "").split(/[,、]/).map(v => parseInt(v) || 0);
 
-    // 用途が1つも含まれない＆3行形式でないときはヘルプを返す
-    const hasKnownTask = picks.some((p) => TASKS[p]);
+    // 用途が無い/不明ならヘルプ
+    const hasKnownTask = picks.some(p => TASKS[p]);
     if (!hasKnownTask) {
       await reply(ev.replyToken, [{
         type: "text",
-        text: "入力例：\n運転,PC,スマホ\n48\n40,60\n（まずは「診断開始」と送るとボタンが出ます）",
+        text: "入力例：\n運転,PC,スマホ\n48\n40,60\n（まずは「診断開始」と送るとボタンが出ます）"
       }]);
       continue;
     }
@@ -132,7 +130,7 @@ app.post("/webhook", async (req, res) => {
     const dNear = demand(nearCm);
     const dPc = demand(pcCm);
 
-    // 3) Flexメッセージ（カード風の結果）
+    // 3) Flexメッセージ
     const flex = {
       type: "flex",
       altText: `提案：${cat}`,
@@ -143,8 +141,8 @@ app.post("/webhook", async (req, res) => {
           layout: "vertical",
           contents: [
             { type: "text", text: "メガネ簡易診断", weight: "bold", size: "sm", color: "#888888" },
-            { type: "text", text: `提案：${cat}`, weight: "bold", size: "xl" },
-          ],
+            { type: "text", text: `提案：${cat}`, weight: "bold", size: "xl" }
+          ]
         },
         body: {
           type: "box",
@@ -158,8 +156,8 @@ app.post("/webhook", async (req, res) => {
               contents: [
                 { type: "text", text: `遠 ${w.far}`, size: "sm" },
                 { type: "text", text: `中 ${w.mid}`, size: "sm" },
-                { type: "text", text: `近 ${w.near}`, size: "sm" },
-              ],
+                { type: "text", text: `近 ${w.near}`, size: "sm" }
+              ]
             },
             { type: "separator", margin: "md" },
             { type: "text", text: "作業距離からの焦点要求", weight: "bold", size: "sm", margin: "md" },
@@ -167,9 +165,27 @@ app.post("/webhook", async (req, res) => {
             { type: "text", text: `PC ${pcCm || "?"}cm ≈ ${dPc || "?"}D`, size: "sm" },
             { type: "text", text: `年齢ADD目安：${addAge.toFixed(2)}D`, size: "sm", margin: "sm" },
             { type: "separator", margin: "md" },
-            {
-              type: "text",
-              text: "※最終度数は検眼・装用テストで決定",
-              size: "xs",
-              color: "#888888",
-              wrap: true,
+            { type: "text", text: "※最終度数は検眼・装用テストで決定", size: "xs", color: "#888888", wrap: true }
+          ]
+        },
+        footer: {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "button", style: "primary", color: "#1E40AF",
+              action: { type: "message", label: "もう一度診断", text: "診断開始" } }
+          ]
+        }
+      }
+    };
+    await reply(ev.replyToken, [flex]);
+  }
+
+  res.status(200).end();
+});
+
+// --- health & root ---
+app.get("/", (_req, res) => res.send("LINE bot is running"));
+app.get("/healthz", (_req, res) => res.send("ok"));
+
+app.listen(process.env.PORT || 3000, () => console.log("LINE bot running"));
